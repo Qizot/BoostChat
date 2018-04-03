@@ -48,7 +48,7 @@ public:
 
 	bool DecodeHeader() //decodes header and reserves space for string
 	{
-
+		
 		ptr header = m_msg.data();
 		ptr header_end = m_msg.data() + 3;
 		ptr nick = header_end + 1;
@@ -65,6 +65,9 @@ public:
 			m_nick_size = std::strtoull(nick, &nick_end, 16);
 		}
 		else
+			return false;
+
+		if (m_nick_size > std::numeric_limits<std::uint8_t>::max() || m_msg_size > std::numeric_limits<std::uint16_t>::max() || m_msg_size < m_nick_size)
 			return false;
 
 		m_msg.reserve(m_msg_size + header_length);
@@ -107,8 +110,6 @@ public:
 	}
 
 	
-
-
 	T GetMessageString() const
 	{
 		return m_msg;
