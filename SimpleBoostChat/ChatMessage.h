@@ -50,7 +50,7 @@ public:
 	{
 
 		ptr header = m_msg.data();
-		ptr header_end = m_msg.data() + 4;
+		ptr header_end = m_msg.data() + 3;
 		ptr nick = header_end + 1;
 		ptr nick_end = nick + 1;
 
