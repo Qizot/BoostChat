@@ -1,10 +1,8 @@
 #pragma once
-#include <cstdint>
 #include <string>
-#include <cstdlib>
 #include <sstream>
-#include <limits>
-#include <vector>
+#include <boost/asio.hpp>
+
 
 /*
 	ChatMessage consists of:
@@ -35,44 +33,51 @@
 
 namespace chat {
 
-	class BasicMessage
+	class Basic_Message
 	{
 	public:
 		inline static constexpr size_t header_size = 4;
 		
 	public:
-		BasicMessage(const std::string&);
-		BasicMessage(std::string&&);
-		BasicMessage(const BasicMessage&) = default;
-		BasicMessage(BasicMessage&&) = default;
+		Basic_Message() : msg("    ") {}
 
-		virtual ~BasicMessage() {}
+		template<typename U>
+		Basic_Message(U&& str, typename std::enable_if_t<std::is_constructible<std::string, U>::value>* = 0) : msg(std::forward<U>(str)) {}
+		
+		Basic_Message(const Basic_Message&) = default;
+		Basic_Message(Basic_Message&&) = default;
 
-		void reload_header(std::string);
+		virtual ~Basic_Message() {}
 
-		virtual void parse_message() {}
+		
+
+		virtual bool parse_message() { return true; }
 		virtual bool parse_header();
 		virtual std::string string() const;
 	 	
-
-		inline size_t body_size() const { return msg.size() - header_size; }
-		inline char* data() { return msg.data() + header_size; }
+		decltype(auto) header_buffer() { return boost::asio::buffer(msg.data(), header_size); }
+		decltype(auto) body_buffer() { return boost::asio::buffer(msg.data() + header_size, m_body_size); }
+		decltype(auto) message_buffer() { return boost::asio::buffer(msg.data(), msg.size()); }
+		friend std::ostream& operator <<(std::ostream& out, const Basic_Message& b);	
 		
-
 	protected:
 		inline void resize_msg(size_t n) { msg.resize(n); }
+		void create_header();
 
-
-	private:
+	protected:
 		std::string msg;
-		size_t body_size;
+		size_t m_body_size;
 
 	};
 
-	class ChatMessage : public BasicMessage
+	//TODO special constructor for ChatMessage to parse nick and message context into msg and create the header
+
+	class ChatMessage : public Basic_Message
 	{
 	public:
-		virtual void parse_message() final;
+		using Basic_Message::Basic_Message;
+		virtual bool parse_message() final;
+		virtual std::string string() const final;
 	private:
 		std::string nick;
 		size_t nick_size;
