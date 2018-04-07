@@ -32,7 +32,7 @@ namespace chat
 	void SessionParticipant::participate()
 	{
 		room.join(shared_from_this());
-		boost::asio::async_read(sock, read_msg.header_buffer(), [this](const boost::system::error_code& code)
+		boost::asio::async_read(sock, read_msg.header_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
 		{
 			this->handle_header_read(code);
 		});
@@ -43,7 +43,7 @@ namespace chat
 	{
 		if (!error && read_msg.parse_header())
 		{
-			boost::asio::async_read(sock, read_msg.body_buffer(), [this](const boost::system::error_code& code)
+			boost::asio::async_read(sock, read_msg.body_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
 			{
 				this->handle_body_read(code);
 			});
@@ -58,7 +58,7 @@ namespace chat
 		if (!error)
 		{
 			room.deliver(read_msg);
-			boost::asio::async_read(sock, read_msg.header_buffer(), [this](const boost::system::error_code& code)
+			boost::asio::async_read(sock, read_msg.header_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
 			{
 				this->handle_header_read(code);
 			});
@@ -72,7 +72,7 @@ namespace chat
 	void SessionParticipant::deliver(chat::ChatMessage msg)
 	{
 		messages.push(std::move(msg));
-		boost::asio::async_write(sock, messages.front().message_buffer(), [this](const boost::system::error_code& code)
+		boost::asio::async_write(sock, messages.front().message_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
 		{
 			this->handle_write(code);
 		});
@@ -86,7 +86,7 @@ namespace chat
 			bool lasting_messages = !messages.empty();
 			if (lasting_messages)
 			{
-				boost::asio::async_write(sock, messages.front().message_buffer(), [this](const boost::system::error_code& code)
+				boost::asio::async_write(sock, messages.front().message_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
 				{
 					this->handle_write(code);
 				});
@@ -95,8 +95,5 @@ namespace chat
 		else
 			room.leave(shared_from_this());
 	}
-
-
-
 
 } // chat namespace
