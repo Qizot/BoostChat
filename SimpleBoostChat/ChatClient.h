@@ -15,7 +15,7 @@ public:
 	ChatClient(std::ostream& out, boost::asio::io_service& io_service, tcp::resolver::iterator endpoint_iter);
 
 	
-	void write(chat::ChatMessage&);
+	void write(chat::ChatMessage);
 	void close();
 	
 
@@ -25,7 +25,7 @@ public:
 
 	void handle_write(const boost::system::error_code&);
 
-	void do_write(chat::ChatMessage&);
+	void do_write(chat::ChatMessage);
 	void do_close();
 
 private:

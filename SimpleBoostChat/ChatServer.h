@@ -10,15 +10,22 @@
 
 
 namespace chat {
+	class ChatParticipant;
+	class SessionParticipant;
+	class ChatRoom;
+	class ChatServer;
 
+
+	using participant_ptr = std::shared_ptr<chat::ChatParticipant>;
 	using boost::asio::ip::tcp;
 
 	class ChatParticipant
 	{
 	public:
 
-		virtual ~ChatParticipant();
+		virtual ~ChatParticipant() {};
 		virtual void deliver(chat::ChatMessage) = 0;
+		virtual void participate() = 0;
 	};
 
 	class ChatRoom
@@ -63,6 +70,20 @@ namespace chat {
 		chat::ChatMessage read_msg;
 		MessageQueue messages;
 
+	};
+
+	class ChatServer
+	{
+	public:
+		ChatServer(boost::asio::io_service& io_service, const tcp::endpoint& endpoint) : ios(io_service), acceptor(io_service, endpoint) {}
+
+		void start_accepting();
+		void handle_accept(const boost::system::error_code&, participant_ptr);
+
+	private:
+		boost::asio::io_service& ios;
+		tcp::acceptor acceptor;
+		chat::ChatRoom room;
 	};
 
 

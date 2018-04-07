@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "ChatMessage.h"
-#include <iostream>
+#include <iomanip>
 
 
 
@@ -14,10 +14,17 @@ namespace chat {
 
 	void Basic_Message::create_header()
 	{
-		throw;
+		std::ostringstream ss,tt;
+		ss << std::hex << msg.size();
+		tt << std::setfill('0') << std::setw(4) << ss.str();
+		msg = tt.str() + msg;
+
 	}
 
-
+	void Basic_Message::load_message(std::string s)
+	{
+		msg = std::move(s);
+	}
 
 	bool Basic_Message::parse_header()
 	{
@@ -30,6 +37,18 @@ namespace chat {
 
 	}
 
+	void ChatMessage::load_message(std::string n, std::string b)
+	{
+		nick_size = n.size();
+		nick = n;
+		std::ostringstream ss, msg_buf;
+		ss << std::hex << nick_size;
+		msg_buf << ss.str() << n << b;
+		msg = msg_buf.str();
+		create_header();
+		parse_message();
+	}
+
 	bool ChatMessage::parse_message()
 	{
 		std::istringstream ss(msg.substr(4, 1));
@@ -40,16 +59,15 @@ namespace chat {
 		return true;
 	}
 
-	std::string ChatMessage::string() const
+	std::string ChatMessage::string()
 	{
 		return nick + ": " + msg.substr(5 + nick_size);
-
 	}
 
-	std::ostream& operator <<(std::ostream& out, const Basic_Message& b)
+	/*std::ostream& operator <<(std::ostream& out, const Basic_Message& b)
 	{
 		out << b.string();
 		return out;
-	}
+	}*/
 
 } // chat namespace

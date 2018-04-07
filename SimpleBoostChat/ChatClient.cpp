@@ -41,7 +41,7 @@ void ChatClient::handle_body_read(const boost::system::error_code& error)
 {
 	if (!error && read_msg.parse_message())
 	{
-		out << read_msg.string();
+		out << read_msg.string() << std::endl;
 		boost::asio::async_read(socket, read_msg.header_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
 		{
 			this->handle_header_read(code);
@@ -51,15 +51,15 @@ void ChatClient::handle_body_read(const boost::system::error_code& error)
 		do_close();
 }
  
-void ChatClient::write(chat::ChatMessage & msg)
+void ChatClient::write(chat::ChatMessage msg)
 {
-	ios.post([this, &msg]()
+	ios.post([this,msg]()
 	{
 		this->do_write(msg);
 	});
 }
 
-void ChatClient::do_write(chat::ChatMessage& msg)
+void ChatClient::do_write(chat::ChatMessage msg)
 {
 	msg_queue.push(std::move(msg));
 	boost::asio::async_write(socket, msg_queue.front().message_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)

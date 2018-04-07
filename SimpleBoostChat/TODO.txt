@@ -1,9 +1,11 @@
+1. Don't send messages to the user that just have sent the msg
+2. Implement disconnect system for the client if server doesn't respond
 
-1. Constructor for Basic_message to automatically create the header after loading the string object
-2. Constructor for ChatMessage to parse nick nad msg context and invoke header_create
+
+
 
 ? If participant copies the message and there are a lot of them should the messages have characters limit and if so what the limit should be [proposal: 4096]
-
+? should ChatMessage have validation function?
 
 ERROR:
 -there is 100% data race, the option is: copy message every time when its needed or keep playing with it and make thread-safe data structures(good for practice when I get time)
@@ -12,5 +14,5 @@ write code and then debug it(as well for practice)
 
 Further thoughts:
 - is everything really thread safe?
-- can the server be run on multiply threads or just one?
+- can the server be run on multiply threads or just one? |||| one thread for one server for one port
 - should the participants' actions be run on their own boost::strands?
