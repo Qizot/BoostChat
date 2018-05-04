@@ -1,82 +1,71 @@
 #pragma once
-#include <iostream>
-#include <string>
-#include <sstream>
-#include <boost/asio.hpp>
-
-
-/*
-	ChatMessage consists of:
-	- 4 bytes of hex value consisting number of message chars(leading byte is hex number of nickname chars)
-	- accordingly to previous lenght, the nick name
-	- message body
-
-
-*/
-
-
-
+#include <nlohmann/json.hpp>
+#include <optional>
+#include <boost\asio.hpp>
 
 namespace chat {
+	class BaseMessage;
+	using ChatMessage = BaseMessage;
+	using json = nlohmann::json;
 
-	class Basic_Message
+	struct BaseConverter
 	{
-	public:
-		inline static constexpr size_t header_size = 4;
-		
-	public:
-		Basic_Message() : msg("    ") {}
-
-		Basic_Message(std::string str) : msg(str) { create_header(); parse_message(); }
-		Basic_Message(std::string&& str) : msg(std::move(str)) { create_header(); }
-
-		virtual void load_message(std::string);
-		
-		Basic_Message(const Basic_Message&) = default;
-		Basic_Message(Basic_Message&&) = default;
-
-		virtual ~Basic_Message() {}
-
-		
-
-		virtual bool parse_message() { return false; }
-		virtual bool parse_header();
-		virtual std::string string() const;
-		std::string raw_message() const { return msg; }
-	 	
-		decltype(auto) header_buffer() { return boost::asio::buffer(msg.data(), header_size); }
-		decltype(auto) body_buffer() { return boost::asio::buffer(msg.data() + header_size, m_body_size); }
-		decltype(auto) message_buffer() { return boost::asio::buffer(msg.data(), msg.size()); }
-		friend std::ostream& operator <<(std::ostream& out, const Basic_Message& b);	
-		
-	protected:
-		inline void resize_msg(size_t n) { msg.resize(n); }
-		void create_header();
-
-	protected:
-		std::string msg;
-		size_t m_body_size;
-
-	};
-
-	//TODO special constructor for ChatMessage to parse nick and message context into msg and create the header
-
-	class ChatMessage : public Basic_Message
-	{
-	public:
-		ChatMessage() : Basic_Message() {}
-		ChatMessage(std::string str) : Basic_Message(str) { parse_message(); }
-
-		
-		void load_message(std::string, std::string);
-		virtual bool parse_message();
-		virtual std::string string();
+		static int HexToDec(std::string);
+		static std::string DecToHex(std::size_t);
 	private:
-		std::string nick;
-		size_t nick_size;
 
 	};
-	
+
+	struct ChatException : public std::exception
+	{
+		std::string err;
+		ChatException(std::string a) : err(std::string("ChatException: ") + a) {}
+		const char* what() noexcept { return err.c_str(); }
+	};
+
+
+	class BaseMessage
+	{
+		static constexpr std::size_t HEADER_SIZE = 8;
+
+	public:
+		BaseMessage();
+		virtual ~BaseMessage() {};
+
+		//getter and setter for msg
+		void set_msg(std::string nickname, std::string body);
+		virtual std::optional<std::string> get_msg();
+
+		//prepare for departure and receive
+		void prepare_send_buffer();
+		void prepare_receive_buffer();
+		std::size_t msg_binary_size() const { return m_msg_buffer.size(); }
+		
+		//buffers
+		auto header_buffer()
+		{
+			return boost::asio::buffer(m_header_buffer);
+		}
+
+		auto msg_buffer()
+		{
+			return boost::asio::buffer(m_msg_buffer);
+		}
+
+		//parsing
+		bool parse_header();
+		bool parse_msg();
+
+
+	private:
+		std::size_t m_msg_size;
+		json m_msg;
+		std::vector<std::uint8_t> m_msg_buffer;
+		std::vector<std::uint8_t> m_header_buffer;
+
+
+
+	};
 
 }
 

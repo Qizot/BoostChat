@@ -2,7 +2,7 @@
 #include "ChatServer.h"
 #include <iostream>
 
-#define PRINT_FUNCTION_NAME std::cout << __FUNCTION__ << std::endl;
+
 
 namespace chat
 {
@@ -10,21 +10,21 @@ namespace chat
 	//=============ChatRoom=====================
 	void ChatRoom::join(participant_ptr p)
 	{
-		PRINT_FUNCTION_NAME
+		
 		participants.insert(p);
-		for (auto& msg : messages)
-			p->deliver(msg);
+		for (auto msg : messages)
+			p->deliver(std::move(msg));
 	}
 
 	void ChatRoom::leave(participant_ptr p)
 	{
-		PRINT_FUNCTION_NAME
+		
 		participants.erase(p);
 	}
 
-	void ChatRoom::deliver(chat::ChatMessage msg)
+	void ChatRoom::deliver(message_ptr msg)
 	{
-		PRINT_FUNCTION_NAME
+		
 		if (messages.size() > messages_limit)
 			messages.pop_front();
 		messages.push_back(msg);
@@ -36,9 +36,9 @@ namespace chat
 
 	void SessionParticipant::participate()
 	{
-		PRINT_FUNCTION_NAME
+		
 		room.join(shared_from_this());
-		boost::asio::async_read(sock, read_msg.header_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
+		boost::asio::async_read(sock, read_msg->header_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
 		{
 			this->handle_header_read(code);
 		});
@@ -47,10 +47,11 @@ namespace chat
 	
 	void SessionParticipant::handle_header_read(const boost::system::error_code& error)
 	{
-		PRINT_FUNCTION_NAME
-		if (!error && read_msg.parse_header())
+		
+		if (!error && read_msg->parse_header())
 		{
-			boost::asio::async_read(sock, read_msg.body_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
+			read_msg->prepare_receive_buffer();
+			boost::asio::async_read(sock, read_msg->msg_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
 			{
 				this->handle_body_read(code);
 			});
@@ -62,14 +63,17 @@ namespace chat
 
 	void SessionParticipant::handle_body_read(const boost::system::error_code& error)
 	{
-		PRINT_FUNCTION_NAME
+		
 		if (!error)
 		{
-			read_msg.parse_message();
-			std::cout << read_msg.string() << std::endl;
+
+			read_msg->parse_msg();
+			std::cout << *read_msg->get_msg() << std::endl;
 			
-			room.deliver(read_msg);
-			boost::asio::async_read(sock, read_msg.header_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
+			room.deliver(std::move(read_msg));
+			read_msg.reset(new ChatMessage);
+
+			boost::asio::async_read(sock, read_msg->header_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
 			{
 				this->handle_header_read(code);
 			});
@@ -79,11 +83,12 @@ namespace chat
 	}
 
 
-	void SessionParticipant::deliver(chat::ChatMessage msg)
+	void SessionParticipant::deliver(message_ptr msg)
 	{
-		PRINT_FUNCTION_NAME
+		
 		messages.push(std::move(msg));
-		boost::asio::async_write(sock, messages.front().message_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
+		messages.front()->prepare_send_buffer();
+		boost::asio::async_write(sock, messages.front()->msg_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
 		{
 			this->handle_write(code);
 		});
@@ -91,14 +96,15 @@ namespace chat
 
 	void SessionParticipant::handle_write(const boost::system::error_code& error)
 	{
-		PRINT_FUNCTION_NAME
+		
 		if (!error)
 		{
 			messages.pop();
 			bool lasting_messages = !messages.empty();
 			if (lasting_messages)
 			{
-				boost::asio::async_write(sock, messages.front().message_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
+				messages.front()->prepare_send_buffer();
+				boost::asio::async_write(sock, messages.front()->msg_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
 				{
 					this->handle_write(code);
 				});
@@ -111,7 +117,7 @@ namespace chat
 
 	void ChatServer::start_accepting()
 	{
-		PRINT_FUNCTION_NAME
+		
 		auto new_session = std::make_shared<chat::SessionParticipant>(ios, room);
 
 		acceptor.async_accept(new_session->socket(), [this,new_session](const boost::system::error_code& code)
@@ -122,7 +128,7 @@ namespace chat
 
 	void ChatServer::handle_accept(const boost::system::error_code& error, participant_ptr p)
 	{
-		PRINT_FUNCTION_NAME
+		
 		if (!error)
 			p->participate();
 		start_accepting();

@@ -1,3 +1,19 @@
+THE MOST IMPORTANT !!!
+==============================================
+Implement header sending in new Message class!
+==============================================
+
+
+
+
+
+
+1. Documentation
+
+2. MESSAGES should be transfered via shared_ptr, the message won't be copied and it also wont be destroyed after poping it from the queue while some session is sending it
+3. shared_from_this can only be called when the object has been constructed as shared_ptr
+4. what about strand per participant?
+
 1. Don't send messages to the user that just have sent the msg
 2. Implement disconnect system for the client if server doesn't respond
 
@@ -7,9 +23,8 @@
 ? If participant copies the message and there are a lot of them should the messages have characters limit and if so what the limit should be [proposal: 4096]
 ? should ChatMessage have validation function?
 
-ERROR:
--there is 100% data race, the option is: copy message every time when its needed or keep playing with it and make thread-safe data structures(good for practice when I get time)
-write code and then debug it(as well for practice)
+
+
 
 
 Further thoughts:

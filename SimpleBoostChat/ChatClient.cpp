@@ -17,7 +17,7 @@ void ChatClient::handle_connect(const boost::system::error_code& error)
 {
 	if (!error)
 	{
-		boost::asio::async_read(socket, read_msg.header_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
+		boost::asio::async_read(socket, read_msg->header_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
 		{
 			this->handle_header_read(code);
 		});
@@ -26,9 +26,10 @@ void ChatClient::handle_connect(const boost::system::error_code& error)
 
 void ChatClient::handle_header_read(const boost::system::error_code& error)
 {
-	if (!error && read_msg.parse_header())
+	if (!error && read_msg->parse_header())
 	{
-		boost::asio::async_read(socket, read_msg.body_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
+		read_msg->prepare_receive_buffer();
+		boost::asio::async_read(socket, read_msg->msg_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
 		{
 			this->handle_body_read(code);
 		});
@@ -39,10 +40,10 @@ void ChatClient::handle_header_read(const boost::system::error_code& error)
 
 void ChatClient::handle_body_read(const boost::system::error_code& error)
 {
-	if (!error && read_msg.parse_message())
+	if (!error && read_msg->parse_msg())
 	{
-		out << read_msg.string() << std::endl;
-		boost::asio::async_read(socket, read_msg.header_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
+		out << *read_msg->get_msg() << std::endl;
+		boost::asio::async_read(socket, read_msg->header_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
 		{
 			this->handle_header_read(code);
 		});
@@ -51,18 +52,19 @@ void ChatClient::handle_body_read(const boost::system::error_code& error)
 		do_close();
 }
  
-void ChatClient::write(chat::ChatMessage msg)
+void ChatClient::write(MessagePtr msg)
 {
-	ios.post([this,msg]()
+	ios.post([this,&msg]()
 	{
-		this->do_write(msg);
+		this->do_write(std::move(msg));
 	});
 }
 
-void ChatClient::do_write(chat::ChatMessage msg)
+void ChatClient::do_write(MessagePtr msg)
 {
 	msg_queue.push(std::move(msg));
-	boost::asio::async_write(socket, msg_queue.front().message_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
+	msg_queue.front()->prepare_send_buffer();
+	boost::asio::async_write(socket, msg_queue.front()->msg_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
 	{
 		this->handle_write(code);
 	});
@@ -76,7 +78,8 @@ void ChatClient::handle_write(const boost::system::error_code& error)
 		bool waiting_messages = !msg_queue.empty();
 		if (waiting_messages)
 		{
-			boost::asio::async_write(socket, msg_queue.front().message_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
+			msg_queue.front()->prepare_send_buffer();
+			boost::asio::async_write(socket, msg_queue.front()->msg_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
 			{
 				this->handle_write(code);
 			});

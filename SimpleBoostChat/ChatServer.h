@@ -17,6 +17,7 @@ namespace chat {
 
 
 	using participant_ptr = std::shared_ptr<chat::ChatParticipant>;
+	using message_ptr = std::shared_ptr<chat::ChatMessage>;
 	using boost::asio::ip::tcp;
 
 	class ChatParticipant
@@ -24,7 +25,7 @@ namespace chat {
 	public:
 
 		virtual ~ChatParticipant() {};
-		virtual void deliver(chat::ChatMessage) = 0;
+		virtual void deliver(message_ptr) = 0;
 		virtual void participate() = 0;
 	};
 
@@ -32,12 +33,12 @@ namespace chat {
 	{
 		using participant_ptr = std::shared_ptr<chat::ChatParticipant>;
 		using participants_pool = std::set<participant_ptr>;
-		using current_messages = std::deque<chat::ChatMessage>;
+		using current_messages = std::deque<message_ptr>;
 		static constexpr size_t messages_limit = 100;
 	public:
 		void join(participant_ptr);			  // connect user to the room
 		void leave(participant_ptr);		  // diconnect user from the chat
-		void deliver(chat::ChatMessage); // deliver message to all participants and add it to the current messages
+		void deliver(message_ptr); // deliver message to all participants and add it to the current messages
 
 	private:
 		participants_pool participants;
@@ -48,12 +49,12 @@ namespace chat {
 
 	class SessionParticipant : public ChatParticipant, public std::enable_shared_from_this<SessionParticipant>
 	{
-		using MessageQueue = std::queue<chat::ChatMessage>;
+		using MessageQueue = std::queue<message_ptr>;
 	public:
 		SessionParticipant(boost::asio::io_service& io_service, chat::ChatRoom& room) : ios(io_service), sock(io_service), room(room) {}
 
 		void participate(); // starts receiving messages from remote client
-		void deliver(chat::ChatMessage);
+		void deliver(message_ptr);
 
 		void handle_header_read(const boost::system::error_code&);
 		void handle_body_read(const boost::system::error_code&);
@@ -67,7 +68,7 @@ namespace chat {
 		boost::asio::io_service& ios;
 		tcp::socket sock;
 		chat::ChatRoom& room;
-		chat::ChatMessage read_msg;
+		message_ptr read_msg;
 		MessageQueue messages;
 
 	};

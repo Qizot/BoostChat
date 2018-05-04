@@ -1,73 +1,87 @@
 #include "stdafx.h"
 #include "ChatMessage.h"
-#include <iomanip>
-
-
+#include <boost\asio.hpp>
 
 
 namespace chat {
 
-	std::string Basic_Message::string() const
+	int BaseConverter::HexToDec(std::string a)
 	{
-		return msg.substr(header_size);
+		int n = std::strtol(a.c_str(), nullptr, 16);
+		return n;
 	}
 
-	void Basic_Message::create_header()
+	std::string BaseConverter::DecToHex(std::size_t n)
 	{
-		std::ostringstream ss,tt;
-		ss << std::hex << msg.size();
-		tt << std::setfill('0') << std::setw(4) << ss.str();
-		msg = tt.str() + msg;
+		std::ostringstream ss;
+		ss << std::hex << n;
+		return ss.str();
+	}
+
+	BaseMessage::BaseMessage() : m_header_buffer(HEADER_SIZE) {}
+
+	void BaseMessage::set_msg(std::string nickname, std::string body)
+	{
+		m_msg.clear();
+		m_msg["nickname"] = nickname;
+		m_msg["content"] = body;
+	}
+
+	std::optional<std::string> BaseMessage::get_msg()
+	{
+		try
+		{
+			std::ostringstream ss;
+			ss << m_msg.at("nickname").get<std::string>() << ": " << m_msg.at("content").get<std::string>();
+			return ss.str();
+		}
+		catch (json::exception&)
+		{
+			return std::nullopt;
+		}
 
 	}
 
-	void Basic_Message::load_message(std::string s)
+	void BaseMessage::prepare_send_buffer()
 	{
-		msg = std::move(s);
+		m_msg_buffer.clear();
+		auto vec = json::to_cbor(m_msg);
+		auto header = BaseConverter::DecToHex(vec.size());
+		m_msg_buffer.resize(vec.size() + HEADER_SIZE);
+
+		std::copy(begin(header), end(header), begin(m_msg_buffer));
+		std::copy(begin(vec), end(vec), begin(m_msg_buffer) + HEADER_SIZE);
+
+		m_msg_size = m_msg_buffer.size() + HEADER_SIZE;
 	}
 
-	bool Basic_Message::parse_header()
+	void BaseMessage::prepare_receive_buffer()
 	{
-		std::istringstream ss(msg.substr(0, Basic_Message::header_size));
-		ss >> std::hex >> m_body_size;
-		if (ss.fail())
+		m_msg_buffer.clear();
+		m_msg_buffer.resize(m_msg_size);
+	}
+
+	
+
+	bool BaseMessage::parse_header()
+	{
+		std::string n(begin(m_header_buffer), end(m_header_buffer));
+		m_msg_size = BaseConverter::HexToDec(n);
+		return m_msg_size > 0 ? true : false;
+	}
+
+	bool BaseMessage::parse_msg()
+	{
+		m_msg.clear();
+		try
+		{
+			m_msg = json::from_cbor(m_msg_buffer);
+		}
+		catch (json::exception&)
+		{
 			return false;
-		resize_msg(header_size + m_body_size);
-		return true;
-
-	}
-
-	void ChatMessage::load_message(std::string n, std::string b)
-	{
-		nick_size = n.size();
-		nick = n;
-		std::ostringstream ss, msg_buf;
-		ss << std::hex << nick_size;
-		msg_buf << ss.str() << n << b;
-		msg = msg_buf.str();
-		create_header();
-		parse_message();
-	}
-
-	bool ChatMessage::parse_message()
-	{
-		std::istringstream ss(msg.substr(4, 1));
-		ss >> std::hex >> nick_size;
-		if (ss.fail())
-			return false;
-		nick = msg.substr(5, nick_size);
+		}
 		return true;
 	}
+}
 
-	std::string ChatMessage::string()
-	{
-		return nick + ": " + msg.substr(5 + nick_size);
-	}
-
-	/*std::ostream& operator <<(std::ostream& out, const Basic_Message& b)
-	{
-		out << b.string();
-		return out;
-	}*/
-
-} // chat namespace

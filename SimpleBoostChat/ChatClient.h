@@ -5,7 +5,8 @@
 #include <queue>
 
 using boost::asio::ip::tcp;
-using MessageQueue = std::queue<chat::ChatMessage>;
+using MessagePtr = std::shared_ptr<chat::ChatMessage>;
+using MessageQueue = std::queue<MessagePtr>;
 
 namespace chat {
 
@@ -15,7 +16,7 @@ public:
 	ChatClient(std::ostream& out, boost::asio::io_service& io_service, tcp::resolver::iterator endpoint_iter);
 
 	
-	void write(chat::ChatMessage);
+	void write(MessagePtr);
 	void close();
 	
 
@@ -25,13 +26,13 @@ public:
 
 	void handle_write(const boost::system::error_code&);
 
-	void do_write(chat::ChatMessage);
+	void do_write(MessagePtr);
 	void do_close();
 
 private:
 	boost::asio::io_service& ios;
 	tcp::socket socket;
-	chat::ChatMessage read_msg;
+	std::unique_ptr<chat::ChatMessage> read_msg;
 	MessageQueue msg_queue;
 	std::ostream& out;
 	
