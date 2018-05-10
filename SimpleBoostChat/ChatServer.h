@@ -34,7 +34,7 @@ namespace chat {
 		using participant_ptr = std::shared_ptr<chat::ChatParticipant>;
 		using participants_pool = std::set<participant_ptr>;
 		using current_messages = std::deque<message_ptr>;
-		static constexpr size_t messages_limit = 100;
+		static constexpr size_t messages_limit = 20;
 	public:
 		void join(participant_ptr);			  // connect user to the room
 		void leave(participant_ptr);		  // diconnect user from the chat
@@ -43,15 +43,13 @@ namespace chat {
 	private:
 		participants_pool participants;
 		current_messages messages;
-
-
 	};
 
 	class SessionParticipant : public ChatParticipant, public std::enable_shared_from_this<SessionParticipant>
 	{
 		using MessageQueue = std::queue<message_ptr>;
 	public:
-		SessionParticipant(boost::asio::io_service& io_service, chat::ChatRoom& room) : ios(io_service), sock(io_service), room(room) {}
+		SessionParticipant(boost::asio::io_service& io_service, chat::ChatRoom& room) : ios(io_service), sock(io_service), room(room), read_msg(new BaseMessage) {}
 
 		void participate(); // starts receiving messages from remote client
 		void deliver(message_ptr);

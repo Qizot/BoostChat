@@ -5,8 +5,9 @@
 namespace chat {
 
 ChatClient::ChatClient(std::ostream& out, boost::asio::io_service& io_service,
-	tcp::resolver::iterator endpoint_iter) : out(out), ios(io_service), socket(io_service)
+	tcp::resolver::iterator endpoint_iter) : out(out), ios(io_service), socket(io_service), read_msg(new BaseMessage())
 {
+	FUNCTION_NAME
 	boost::asio::async_connect(socket, endpoint_iter, [this](const boost::system::error_code& code, boost::asio::ip::tcp::resolver::iterator iterator)
 	{
 		this->handle_connect(code);
@@ -15,6 +16,7 @@ ChatClient::ChatClient(std::ostream& out, boost::asio::io_service& io_service,
 
 void ChatClient::handle_connect(const boost::system::error_code& error)
 {
+	FUNCTION_NAME
 	if (!error)
 	{
 		boost::asio::async_read(socket, read_msg->header_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
@@ -26,6 +28,7 @@ void ChatClient::handle_connect(const boost::system::error_code& error)
 
 void ChatClient::handle_header_read(const boost::system::error_code& error)
 {
+	FUNCTION_NAME
 	if (!error && read_msg->parse_header())
 	{
 		read_msg->prepare_receive_buffer();
@@ -40,6 +43,7 @@ void ChatClient::handle_header_read(const boost::system::error_code& error)
 
 void ChatClient::handle_body_read(const boost::system::error_code& error)
 {
+	FUNCTION_NAME
 	if (!error && read_msg->parse_msg())
 	{
 		out << *read_msg->get_msg() << std::endl;
@@ -54,15 +58,17 @@ void ChatClient::handle_body_read(const boost::system::error_code& error)
  
 void ChatClient::write(MessagePtr msg)
 {
-	ios.post([this,&msg]()
+	FUNCTION_NAME
+	ios.post([this, m = std::move(msg)]()
 	{
-		this->do_write(std::move(msg));
+		this->do_write(m);
 	});
 }
 
 void ChatClient::do_write(MessagePtr msg)
 {
-	msg_queue.push(std::move(msg));
+	FUNCTION_NAME
+	msg_queue.push(msg);
 	msg_queue.front()->prepare_send_buffer();
 	boost::asio::async_write(socket, msg_queue.front()->msg_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
 	{
@@ -72,6 +78,7 @@ void ChatClient::do_write(MessagePtr msg)
 
 void ChatClient::handle_write(const boost::system::error_code& error)
 {
+	FUNCTION_NAME
 	if (!error)
 	{
 		msg_queue.pop();
@@ -91,6 +98,7 @@ void ChatClient::handle_write(const boost::system::error_code& error)
 
 void ChatClient::close()
 {
+	FUNCTION_NAME
 	ios.post([this]() {
 		this->do_close();
 	});
@@ -98,7 +106,9 @@ void ChatClient::close()
 
 void ChatClient::do_close()
 {
+	FUNCTION_NAME
 	socket.close();
+	ios.stop();
 }
 
 

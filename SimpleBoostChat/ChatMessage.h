@@ -44,7 +44,7 @@ namespace chat {
 		//buffers
 		auto header_buffer()
 		{
-			return boost::asio::buffer(m_header_buffer);
+			return boost::asio::buffer(m_header_buffer,HEADER_SIZE);
 		}
 
 		auto msg_buffer()
@@ -58,10 +58,12 @@ namespace chat {
 
 
 	private:
+		std::string create_header(std::size_t);
 		std::size_t m_msg_size;
 		json m_msg;
 		std::vector<std::uint8_t> m_msg_buffer;
 		std::vector<std::uint8_t> m_header_buffer;
+		
 
 
 

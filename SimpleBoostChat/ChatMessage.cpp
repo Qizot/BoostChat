@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "ChatMessage.h"
 #include <boost\asio.hpp>
+#include <iomanip>
 
 
 namespace chat {
@@ -18,7 +19,11 @@ namespace chat {
 		return ss.str();
 	}
 
-	BaseMessage::BaseMessage() : m_header_buffer(HEADER_SIZE) {}
+	BaseMessage::BaseMessage() : m_header_buffer(HEADER_SIZE)
+	{
+		//m_header_buffer.resize(HEADER_SIZE);
+		assert(m_header_buffer.size() == HEADER_SIZE);
+	}
 
 	void BaseMessage::set_msg(std::string nickname, std::string body)
 	{
@@ -44,9 +49,11 @@ namespace chat {
 
 	void BaseMessage::prepare_send_buffer()
 	{
-		m_msg_buffer.clear();
+		
 		auto vec = json::to_cbor(m_msg);
-		auto header = BaseConverter::DecToHex(vec.size());
+		auto header = create_header(vec.size());
+	
+		std::copy(begin(header), end(header), begin(m_header_buffer));
 		m_msg_buffer.resize(vec.size() + HEADER_SIZE);
 
 		std::copy(begin(header), end(header), begin(m_msg_buffer));
@@ -82,6 +89,12 @@ namespace chat {
 			return false;
 		}
 		return true;
+	}
+	std::string BaseMessage::create_header(std::size_t n)
+	{
+		std::ostringstream ss;
+		ss << std::setfill('0') << std::setw(HEADER_SIZE) << BaseConverter::DecToHex(n);
+		return ss.str();
 	}
 }
 

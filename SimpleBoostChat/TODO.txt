@@ -1,7 +1,13 @@
 THE MOST IMPORTANT !!!
-==============================================
-Implement header sending in new Message class!
-==============================================
+========================
+Test server side, runtime errors with vector and deque
+========================
+
+ERROR:
+
+
+
+Segmentation fault of vector: check if beuffer isn't destroyed before accesd by boost::asio::write or read ||| there was a problem with uninitialized smart_ptrs and passing shared_ptr between functions
 
 
 
@@ -20,7 +26,7 @@ Implement header sending in new Message class!
 
 
 
-? If participant copies the message and there are a lot of them should the messages have characters limit and if so what the limit should be [proposal: 4096]
+
 ? should ChatMessage have validation function?
 
 
