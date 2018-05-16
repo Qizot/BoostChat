@@ -49,7 +49,9 @@ namespace chat {
 	{
 		using MessageQueue = std::queue<message_ptr>;
 	public:
-		SessionParticipant(boost::asio::io_service& io_service, chat::ChatRoom& room) : ios(io_service), sock(io_service), room(room), read_msg(new BaseMessage) {}
+		SessionParticipant(boost::asio::io_service& read_service, 
+						   chat::ChatRoom& room) : ios(read_service),
+						   sock(read_service), room(room), read_msg(new BaseMessage) {}
 
 		void participate(); // starts receiving messages from remote client
 		void deliver(message_ptr);
@@ -57,6 +59,7 @@ namespace chat {
 		void handle_header_read(const boost::system::error_code&);
 		void handle_body_read(const boost::system::error_code&);
 
+		void do_write();
 		void handle_write(const boost::system::error_code&);
 
 		tcp::socket& socket() { return sock; }

@@ -1,6 +1,6 @@
 THE MOST IMPORTANT !!!
 ========================
-Test server side, runtime errors with vector and deque
+Each session participant must run within its own strand, otherwise receiving and writting wont be queued
 ========================
 
 ERROR:
@@ -14,14 +14,6 @@ Segmentation fault of vector: check if beuffer isn't destroyed before accesd by 
 
 
 
-1. Documentation
-
-2. MESSAGES should be transfered via shared_ptr, the message won't be copied and it also wont be destroyed after poping it from the queue while some session is sending it
-3. shared_from_this can only be called when the object has been constructed as shared_ptr
-4. what about strand per participant?
-
-1. Don't send messages to the user that just have sent the msg
-2. Implement disconnect system for the client if server doesn't respond
 
 
 

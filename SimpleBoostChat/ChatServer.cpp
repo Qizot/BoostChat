@@ -10,22 +10,19 @@ namespace chat
 	//=============ChatRoom=====================
 	void ChatRoom::join(participant_ptr p)
 	{
-		FUNCTION_NAME
 		participants.insert(p);
-		
+		std::cout << "User joined room\n";
 		for (auto msg : messages)
 			p->deliver(std::move(msg));
 	}
 
 	void ChatRoom::leave(participant_ptr p)
 	{
-		FUNCTION_NAME
 		participants.erase(p);
 	}
 
 	void ChatRoom::deliver(message_ptr msg)
 	{
-		FUNCTION_NAME
 		if (messages.size() > messages_limit)
 			messages.pop_front();
 		messages.push_back(msg);
@@ -37,7 +34,6 @@ namespace chat
 
 	void SessionParticipant::participate()
 	{
-		FUNCTION_NAME
 		room.join(shared_from_this());
 		boost::asio::async_read(sock, read_msg->header_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
 		{
@@ -48,7 +44,6 @@ namespace chat
 	
 	void SessionParticipant::handle_header_read(const boost::system::error_code& error)
 	{
-		FUNCTION_NAME
 		if (!error && read_msg->parse_header())
 		{
 			read_msg->prepare_receive_buffer();
@@ -64,7 +59,6 @@ namespace chat
 
 	void SessionParticipant::handle_body_read(const boost::system::error_code& error)
 	{
-		FUNCTION_NAME
 		if (!error)
 		{
 
@@ -86,27 +80,39 @@ namespace chat
 
 	void SessionParticipant::deliver(message_ptr msg)
 	{
-		FUNCTION_NAME
+		bool pending_write = !messages.empty();
 		messages.push(std::move(msg));
-		messages.front()->prepare_send_buffer();
-		boost::asio::async_write(sock, messages.front()->msg_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
+		
+		if (!pending_write)
+			do_write();	
+	}
+
+	void SessionParticipant::do_write()
+	{
+		assert(!messages.empty(), "message queue empty while trying to write");
+
+		auto msg = messages.front();
+		msg->prepare_send_buffer();
+
+		boost::asio::async_write(sock, msg->msg_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
 		{
 			this->handle_write(code);
 		});
+
 	}
 
 	void SessionParticipant::handle_write(const boost::system::error_code& error)
 	{
-		FUNCTION_NAME
 		if (!error)
 		{
-			if(!messages.empty())
-				messages.pop();
+			assert(!messages.empty(), "messages queue empty");
+			messages.pop();
 			bool lasting_messages = !messages.empty();
 			if (lasting_messages)
 			{
-				messages.front()->prepare_send_buffer();
-				boost::asio::async_write(sock, messages.front()->msg_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
+				auto msg = messages.front();
+				msg->prepare_send_buffer();
+				boost::asio::async_write(sock, msg->msg_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
 				{
 					this->handle_write(code);
 				});
@@ -119,7 +125,6 @@ namespace chat
 
 	void ChatServer::start_accepting()
 	{
-		FUNCTION_NAME
 		auto new_session = std::make_shared<chat::SessionParticipant>(ios, room);
 
 		acceptor.async_accept(new_session->socket(), [this,new_session](const boost::system::error_code& code)
@@ -130,7 +135,6 @@ namespace chat
 
 	void ChatServer::handle_accept(const boost::system::error_code& error, participant_ptr p)
 	{
-		FUNCTION_NAME
 		if (!error)
 			p->participate();
 		start_accepting();
