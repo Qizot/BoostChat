@@ -7,7 +7,6 @@
 
 namespace chat {
 	class BaseMessage;
-	using ChatMessage = BaseMessage;
 	using json = nlohmann::json;
 
 
@@ -42,8 +41,8 @@ namespace chat {
 	private: 
 		std::string create_header(std::size_t);
 
-	protected:
-		json m_msg = {};
+	public:
+		json m_msg;
 
 	private:
 		std::vector<std::uint8_t> m_msg_buffer;
@@ -55,12 +54,13 @@ namespace chat {
 	{
 
 	public:
+		ProtocolMessage() : BaseMessage() {}
 		enum class MsgType { REGISTER, MSG, NONE, UNKNOWN};
 
 		void register_user(const UserData& user);
 		void chat_message(const MessageData& msg);
 
-		MsgType type();
+		MsgType msg_type();
 		
 		std::optional<std::string> msg();
 		std::optional<UserData> user();

@@ -5,7 +5,7 @@
 namespace chat {
 
 ChatClient::ChatClient(std::ostream& out, boost::asio::io_service& io_service,
-	tcp::resolver::iterator endpoint_iter) : out(out), ios(io_service), socket(io_service), read_msg(new BaseMessage())
+	tcp::resolver::iterator endpoint_iter) : out(out), ios(io_service), socket(io_service), read_msg(new message_type())
 {
 	FUNCTION_NAME
 	boost::asio::async_connect(socket, endpoint_iter, [this](const boost::system::error_code& code, boost::asio::ip::tcp::resolver::iterator iterator)
@@ -46,11 +46,11 @@ void ChatClient::handle_body_read(const boost::system::error_code& error)
 	FUNCTION_NAME
 	if (!error && read_msg->parse_msg())
 	{
-		auto* msg = dynamic_cast<ProtocolMessage*>(read_msg.get());
+		//auto* msg = dynamic_cast<ProtocolMessage*>(read_msg.get());
 
-		if (msg && msg->type() == ProtocolMessage::MsgType::MSG)
+		if (read_msg->msg_type() == ProtocolMessage::MsgType::MSG)
 		{
-			auto str = msg->msg();
+			auto str = read_msg->msg();
 			if(str)
 				out << *str << std::endl;
 		}
@@ -64,7 +64,7 @@ void ChatClient::handle_body_read(const boost::system::error_code& error)
 		do_close();
 }
  
-void ChatClient::write(MessagePtr msg)
+void ChatClient::write(message_ptr msg)
 {
 	FUNCTION_NAME
 	ios.post([this, m = std::move(msg)]()
@@ -73,7 +73,7 @@ void ChatClient::write(MessagePtr msg)
 	});
 }
 
-void ChatClient::do_write(MessagePtr msg)
+void ChatClient::do_write(message_ptr msg)
 {
 	FUNCTION_NAME
 	msg_queue.push(msg);

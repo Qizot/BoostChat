@@ -15,9 +15,9 @@ namespace chat {
 	class ChatRoom;
 	class ChatServer;
 
-
+	using message_type = chat::ProtocolMessage;
 	using participant_ptr = std::shared_ptr<chat::ChatParticipant>;
-	using message_ptr = std::shared_ptr<chat::ChatMessage>;
+	using message_ptr = std::shared_ptr<message_type>;
 	using boost::asio::ip::tcp;
 
 	class ChatParticipant
@@ -37,6 +37,7 @@ namespace chat {
 		using current_messages = std::deque<message_ptr>;
 		static constexpr std::size_t messages_limit = 20;
 	public:
+		ChatRoom() : messages() {}
 		void join(participant_ptr);			  // connect user to the room
 		void leave(participant_ptr);		  // diconnect user from the chat
 		void deliver(message_ptr); // deliver message to all participants and add it to the current messages
@@ -52,12 +53,13 @@ namespace chat {
 	public:
 		SessionParticipant(boost::asio::io_service& read_service, 
 						   chat::ChatRoom& room) : ios(read_service),
-						   sock(read_service), room(room), read_msg(new BaseMessage) {}
+						   sock(read_service), room(room), read_msg(new message_type) {}
 
 		void participate() override; // starts receiving messages from remote client
 		void deliver(message_ptr) override;
 		std::string name() override;
 		tcp::socket& socket() { return sock; }
+		void do_close();
 
 	private:
 		void handle_header_read(const boost::system::error_code&);
@@ -67,6 +69,7 @@ namespace chat {
 		void handle_write(const boost::system::error_code&);
 		
 		void manage_msg();
+		
 
 	private:
 		boost::asio::io_service& ios;

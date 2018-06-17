@@ -7,7 +7,7 @@ namespace chat {
 
 
 
-	BaseMessage::BaseMessage() : m_header_buffer(HEADER_SIZE)
+	BaseMessage::BaseMessage() : m_header_buffer(HEADER_SIZE), m_msg()
 	{
 		//m_header_buffer.resize(HEADER_SIZE);
 		assert(m_header_buffer.size() == HEADER_SIZE);
@@ -64,11 +64,14 @@ namespace chat {
 //====================================================================================
 	void ProtocolMessage::register_user(const UserData & user)
 	{
-		auto[name, date] = user;
-		m_msg.clear();
-		m_msg["type"] = std::string("REGISTER");
-		m_msg["name"] = name;
-		m_msg["date"] = date;
+		try {
+			auto[name, date] = user;
+			m_msg = json();
+			m_msg["type"] = std::string("REGISTER");
+			m_msg["name"] = name;
+			m_msg["date"] = date;
+		}
+		catch (std::exception& e) { std::cout << e.what(); }
 	}
 	void ProtocolMessage::chat_message(const MessageData & msg)
 	{
@@ -80,7 +83,7 @@ namespace chat {
 		m_msg["time"] = time;
 	}
 
-	ProtocolMessage::MsgType ProtocolMessage::type()
+	ProtocolMessage::MsgType ProtocolMessage::msg_type()
 	{
 		auto t = m_msg.find("type");
 
@@ -96,7 +99,7 @@ namespace chat {
 	std::optional<std::string> ProtocolMessage::msg()
 	{
 		try {
-			if (type() == MsgType::MSG)
+			if (msg_type() == MsgType::MSG)
 			{
 				std::ostringstream ss;
 				ss << m_msg["time"].get<std::string>() << ": " << m_msg["name"].get<std::string>() << ": " << m_msg["content"].get<std::string>();
@@ -110,7 +113,7 @@ namespace chat {
 	std::optional<UserData> ProtocolMessage::user()
 	{
 		try {
-			if (type() == MsgType::REGISTER)
+			if (msg_type() == MsgType::REGISTER)
 			{
 				auto user = UserData({ m_msg["name"].get<std::string>(), m_msg["date"].get<std::string>() });
 				return user;
