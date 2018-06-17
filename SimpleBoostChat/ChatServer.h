@@ -27,6 +27,7 @@ namespace chat {
 		virtual ~ChatParticipant() {};
 		virtual void deliver(message_ptr) = 0;
 		virtual void participate() = 0;
+		//virtual std::string name() = 0;
 	};
 
 	class ChatRoom
