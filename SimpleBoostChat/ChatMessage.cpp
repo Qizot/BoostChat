@@ -65,6 +65,7 @@ namespace chat {
 	void ProtocolMessage::register_user(const UserData & user)
 	{
 		auto[name, date] = user;
+		m_msg.clear();
 		m_msg["type"] = std::string("REGISTER");
 		m_msg["name"] = name;
 		m_msg["date"] = date;
@@ -72,6 +73,7 @@ namespace chat {
 	void ProtocolMessage::chat_message(const MessageData & msg)
 	{
 		auto[name, content, time] = msg;
+		m_msg.clear();
 		m_msg["type"] = std::string("MSG");
 		m_msg["name"] = name;
 		m_msg["content"] = content;
