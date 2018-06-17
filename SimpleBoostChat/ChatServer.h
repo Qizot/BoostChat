@@ -27,7 +27,7 @@ namespace chat {
 		virtual ~ChatParticipant() {};
 		virtual void deliver(message_ptr) = 0;
 		virtual void participate() = 0;
-		//virtual std::string name() = 0;
+		virtual std::string name() = 0;
 	};
 
 	class ChatRoom
@@ -35,7 +35,7 @@ namespace chat {
 		using participant_ptr = std::shared_ptr<chat::ChatParticipant>;
 		using participants_pool = std::set<participant_ptr>;
 		using current_messages = std::deque<message_ptr>;
-		static constexpr size_t messages_limit = 20;
+		static constexpr std::size_t messages_limit = 20;
 	public:
 		void join(participant_ptr);			  // connect user to the room
 		void leave(participant_ptr);		  // diconnect user from the chat
@@ -54,22 +54,25 @@ namespace chat {
 						   chat::ChatRoom& room) : ios(read_service),
 						   sock(read_service), room(room), read_msg(new BaseMessage) {}
 
-		void participate(); // starts receiving messages from remote client
-		void deliver(message_ptr);
+		void participate() override; // starts receiving messages from remote client
+		void deliver(message_ptr) override;
+		std::string name() override;
+		tcp::socket& socket() { return sock; }
 
+	private:
 		void handle_header_read(const boost::system::error_code&);
 		void handle_body_read(const boost::system::error_code&);
 
 		void do_write();
 		void handle_write(const boost::system::error_code&);
-
-		tcp::socket& socket() { return sock; }
-
+		
+		void manage_msg();
 
 	private:
 		boost::asio::io_service& ios;
 		tcp::socket sock;
 		chat::ChatRoom& room;
+		UserData user;
 		message_ptr read_msg;
 		MessageQueue messages;
 

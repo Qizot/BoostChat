@@ -32,10 +32,10 @@ namespace chat
 	}
 	//=============SessionParticipant================
 
-	void SessionParticipant::participate()
+	void SessionParticipant::participate() 
 	{
 		room.join(shared_from_this());
-		boost::asio::async_read(sock, read_msg->header_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
+		boost::asio::async_read(sock, read_msg->header_buffer(), [this](const boost::system::error_code& code, std::size_t /*bytes transfered */)
 		{
 			this->handle_header_read(code);
 		});
@@ -47,7 +47,7 @@ namespace chat
 		if (!error && read_msg->parse_header())
 		{
 			read_msg->prepare_receive_buffer();
-			boost::asio::async_read(sock, read_msg->msg_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
+			boost::asio::async_read(sock, read_msg->msg_buffer(), [this](const boost::system::error_code& code, std::size_t /*bytes transfered */)
 			{
 				this->handle_body_read(code);
 			});
@@ -59,16 +59,14 @@ namespace chat
 
 	void SessionParticipant::handle_body_read(const boost::system::error_code& error)
 	{
-		if (!error)
+		if (!error && read_msg->parse_msg())
 		{
-
-			read_msg->parse_msg();
-			std::cout << *read_msg->get_msg() << std::endl;
+			manage_msg();
 			
 			room.deliver(std::move(read_msg));
 			read_msg.reset(new ChatMessage);
 
-			boost::asio::async_read(sock, read_msg->header_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
+			boost::asio::async_read(sock, read_msg->header_buffer(), [this](const boost::system::error_code& code, std::size_t /*bytes transfered */)
 			{
 				this->handle_header_read(code);
 			});
@@ -78,13 +76,18 @@ namespace chat
 	}
 
 
-	void SessionParticipant::deliver(message_ptr msg)
+	void SessionParticipant::deliver(message_ptr msg) 
 	{
 		bool pending_write = !messages.empty();
 		messages.push(std::move(msg));
 		
 		if (!pending_write)
 			do_write();	
+	}
+
+	std::string SessionParticipant::name()
+	{
+		return user.name;
 	}
 
 	void SessionParticipant::do_write()
@@ -120,6 +123,23 @@ namespace chat
 		}
 		else
 			room.leave(shared_from_this());
+	}
+	void SessionParticipant::manage_msg()
+	{
+		using Type = ProtocolMessage::MsgType;
+		auto msg = std::dynamic_pointer_cast<ProtocolMessage>(read_msg);
+		switch (msg->type())
+		{
+			case Type::MSG:
+				std::cout << *msg->msg() << "\n";
+				break;
+			case Type::REGISTER:
+				user = *msg->user();
+				break;
+			default:
+				room.leave(shared_from_this());
+				break;
+		}
 	}
 	//================ChatServer=========================
 

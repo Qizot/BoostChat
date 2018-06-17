@@ -1,23 +1,11 @@
 #include "stdafx.h"
 #include "ChatMessage.h"
-#include <boost\asio.hpp>
 #include <iomanip>
 
 
 namespace chat {
 
-	int BaseConverter::HexToDec(std::string a)
-	{
-		int n = std::strtol(a.c_str(), nullptr, 16);
-		return n;
-	}
 
-	std::string BaseConverter::DecToHex(std::size_t n)
-	{
-		std::ostringstream ss;
-		ss << std::hex << n;
-		return ss.str();
-	}
 
 	BaseMessage::BaseMessage() : m_header_buffer(HEADER_SIZE)
 	{
@@ -25,27 +13,6 @@ namespace chat {
 		assert(m_header_buffer.size() == HEADER_SIZE);
 	}
 
-	void BaseMessage::set_msg(std::string nickname, std::string body)
-	{
-		m_msg.clear();
-		m_msg["nickname"] = nickname;
-		m_msg["content"] = body;
-	}
-
-	std::optional<std::string> BaseMessage::get_msg()
-	{
-		try
-		{
-			std::ostringstream ss;
-			ss << m_msg.at("nickname").get<std::string>() << ": " << m_msg.at("content").get<std::string>();
-			return ss.str();
-		}
-		catch (json::exception&)
-		{
-			return std::nullopt;
-		}
-
-	}
 
 	void BaseMessage::prepare_send_buffer()
 	{
@@ -67,8 +34,6 @@ namespace chat {
 		m_msg_buffer.clear();
 		m_msg_buffer.resize(m_msg_size);
 	}
-
-	
 
 	bool BaseMessage::parse_header()
 	{
@@ -95,6 +60,63 @@ namespace chat {
 		std::ostringstream ss;
 		ss << std::setfill('0') << std::setw(HEADER_SIZE) << BaseConverter::DecToHex(n);
 		return ss.str();
+	}
+//====================================================================================
+	void ProtocolMessage::register_user(const UserData & user)
+	{
+		auto[name, date] = user;
+		m_msg["type"] = std::string("REGISTER");
+		m_msg["name"] = name;
+		m_msg["date"] = date;
+	}
+	void ProtocolMessage::chat_message(const MessageData & msg)
+	{
+		auto[name, content, time] = msg;
+		m_msg["type"] = std::string("MSG");
+		m_msg["name"] = name;
+		m_msg["content"] = content;
+		m_msg["time"] = time;
+	}
+
+	ProtocolMessage::MsgType ProtocolMessage::type()
+	{
+		auto t = m_msg.find("type");
+
+		if (t == m_msg.end())
+			return MsgType::NONE;
+		else if (*t == "REGISTER")
+			return MsgType::REGISTER;
+		else if (*t == "MSG")
+			return MsgType::MSG;
+		else
+			return MsgType::UNKNOWN;
+	}
+	std::optional<std::string> ProtocolMessage::msg()
+	{
+		try {
+			if (type() == MsgType::MSG)
+			{
+				std::ostringstream ss;
+				ss << m_msg["time"].get<std::string>() << ": " << m_msg["name"].get<std::string>() << ": " << m_msg["content"].get<std::string>();
+				return ss.str();
+			}
+		}
+		catch (std::exception& e) { std::cout << e.what() << "\n"; }
+
+		return std::nullopt;
+	}
+	std::optional<UserData> ProtocolMessage::user()
+	{
+		try {
+			if (type() == MsgType::REGISTER)
+			{
+				auto user = UserData({ m_msg["name"].get<std::string>(), m_msg["date"].get<std::string>() });
+				return user;
+			}
+		}
+		catch (std::exception& e) { std::cout << e.what() << "\n"; }
+
+		return std::nullopt;
 	}
 }
 

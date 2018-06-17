@@ -35,7 +35,6 @@ private:
 	MessageQueue msg_queue;
 	std::ostream& out;
 	
-
 };
 
 

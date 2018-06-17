@@ -46,7 +46,15 @@ void ChatClient::handle_body_read(const boost::system::error_code& error)
 	FUNCTION_NAME
 	if (!error && read_msg->parse_msg())
 	{
-		out << *read_msg->get_msg() << std::endl;
+		auto* msg = dynamic_cast<ProtocolMessage*>(read_msg.get());
+
+		if (msg && msg->type() == ProtocolMessage::MsgType::MSG)
+		{
+			auto str = msg->msg();
+			if(str)
+				out << *str << std::endl;
+		}
+			
 		boost::asio::async_read(socket, read_msg->header_buffer(), [this](const boost::system::error_code& code, size_t /*bytes transfered */)
 		{
 			this->handle_header_read(code);
