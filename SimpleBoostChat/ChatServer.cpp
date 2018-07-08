@@ -72,9 +72,6 @@ namespace chat
 		{
 			manage_msg();
 			
-			room.deliver(std::move(read_msg));
-			read_msg.reset(new message_type());
-
 			boost::asio::async_read(sock, read_msg->header_buffer(), [this](const boost::system::error_code& code, std::size_t /*bytes transfered */)
 			{
 				this->handle_header_read(code);
@@ -150,6 +147,8 @@ namespace chat
 		switch (msg->msg_type())
 		{
 			case Type::MSG:
+				room.deliver(std::move(read_msg));
+				read_msg.reset(new message_type());
 				break;
 			case Type::REGISTER:
 				user = *msg->user();

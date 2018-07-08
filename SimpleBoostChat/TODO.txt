@@ -1,6 +1,6 @@
 THE MOST IMPORTANT !!!
 ========================
-
+- make the interface work with base message type
 ========================
 
 create base information set about session participant, like name, date of connection ect. 
